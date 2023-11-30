@@ -1,0 +1,26 @@
+field val: Int
+
+field cache: Ref
+field frac: Perm
+
+predicate factory(this: Ref) {
+    acc(this.cache) && acc(this.frac) && this.frac > none &&
+    (this.cache != null ==> acc(this.cache.val, this.frac))
+}
+
+method get(this: Ref) returns (fly: Ref, p: Perm)
+    requires factory(this)
+    ensures factory(this)
+    ensures none < p && acc(this.val, p)
+{
+    unfold factory(this)
+    if(this.cache == null) {
+        fly := new(val)
+        this.cache := fly
+        this.frac := write
+    }
+    fly := this.cache
+    this.frac := this.frac / 2
+    p := this.frac
+    fold factory(this)
+}

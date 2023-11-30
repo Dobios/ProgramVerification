@@ -1,0 +1,6 @@
+function choose() : Int
+
+method main() {
+    assert choose() != choose() // Functions are by definition deterministic so result will always be the same
+    assert choose() == choose()
+}

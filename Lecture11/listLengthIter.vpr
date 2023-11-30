@@ -1,0 +1,51 @@
+field next: Ref
+field elem: Int
+
+predicate list(this: Ref) {
+    acc(this.elem) && acc(this.next) &&
+    (this.next != null ==> list(this.next))
+}
+
+predicate lseg(this: Ref, last: Ref) {
+    this != last ==> acc(this.next) && lseg(this.next, last)
+}
+
+// Add at end is purely to ensure permissions for verification
+method addAtEnd(this: Ref, n: Ref, nn: Ref)
+    requires lseg(this, n)
+    requires acc(n.next) && n.next == nn
+    ensures lseg(this, nn)
+{
+    if(this == n) {
+        fold lseg(nn, nn) // empty segment
+        fold lseg(this, nn)
+    } else {
+        unfold lseg(this, n)
+        addAtEnd(this.next, n, nn)
+        fold lseg(this, nn)
+    }
+}
+
+
+method length(this: Ref) returns (res: Int)
+    requires this != null && lseg(this, null)
+    ensures lseg(this, null)
+{
+    res := 0
+    var curr: Ref := this
+    unfold lseg(this, null)
+    fold lseg(this, curr)
+    while (curr.next != null)
+        invariant acc(curr.next)
+        invariant lseg(curr.next, null)
+        invariant lseg(this, curr)
+    {
+        res := res + 1
+        var tmp: Ref
+        tmp := curr.next
+        addAtEnd(this, curr, curr.next)
+        curr := tmp
+        unfold lseg(curr, null)
+    }      
+    addAtEnd(this, curr, null)
+}

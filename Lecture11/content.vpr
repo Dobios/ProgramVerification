@@ -1,0 +1,22 @@
+field next: Ref
+field elem: Int
+field content: Seq[Int]
+
+predicate list(this: Ref) {
+    acc(this.elem) && acc(this.next) && acc(this.content) &&
+    (this.next == null ==> this.content == Seq[Int]()) &&
+    (this.next != null ==> list(this.next) &&
+        unfolding list(this.next) in 
+            this.content == Seq(this.elem) ++ this.next.content
+    )
+}
+
+method create() returns (res: Ref) 
+    ensures list(res)
+    ensures (unfolding list(res) in res.content) == Seq[Int]() //Express information about the content of the data structure
+{
+    res := new(*)
+    res.next := null
+    res.content := Seq[Int]() //Must update ghost field to reflect content of data structure
+    fold list(res)
+}

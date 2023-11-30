@@ -1,0 +1,32 @@
+function math_is_prime(num: Int): Bool
+    requires num >= 1
+{
+    forall d: Int :: d >= 2 && d < num ==> num % d != 0
+}
+
+method is_prime(n: Int)
+    returns (res: Bool)
+    requires n >= 2
+    ensures res == math_is_prime(n)
+
+method next_prime() {
+    var n: Int // input
+
+    assume n >= 2 && math_is_prime(n) // precondition
+
+    var res: Int := n + 1  // output
+
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 1 (NEXT_PRIME) HERE --
+    var res_is_prime: Bool 
+    res_is_prime := is_prime(res)
+
+    while(!res_is_prime) 
+        invariant n < res
+        invariant res_is_prime == math_is_prime(res)
+    {
+        res := res + 1
+        res_is_prime := is_prime(res)
+    }
+    
+    assert res > n && math_is_prime(res) // postcondition
+}

@@ -1,0 +1,45 @@
+field bal: Int
+
+method transfer(account1: Ref, account2: Ref, sum: Int) 
+    requires acc(account1.bal) && acc(account2.bal)
+    requires 0 < sum
+    ensures acc(account1.bal) && acc(account2.bal)
+    ensures account2.bal == (old(account2.bal) + sum)
+    ensures account1.bal == (old(account1.bal) - sum) 
+{
+    account1.bal := account1.bal - sum
+    account2.bal := account2.bal +  sum
+}
+
+method deposit(account: Ref, sum: Int) 
+    requires acc(account.bal)
+    requires 0 < sum
+    ensures acc(account.bal)
+    ensures account.bal == (old(account.bal) + sum)
+{
+    account.bal := account.bal + sum
+}
+
+method create() returns (res: Ref) 
+    ensures acc(res.bal) && res.bal == 0
+{
+    res := new(bal)
+    res.bal := 0
+}
+
+method client()
+{
+    var x: Ref
+    var y: Ref
+    var z: Ref
+    x := create()
+    y := create()
+    z := create()
+    deposit(x, 100)
+    deposit(y, 200)
+    deposit(z, 300)
+    transfer(x, y, 100)
+    assert x.bal == 0
+    assert y.bal == 300
+    assert z.bal == 300
+}

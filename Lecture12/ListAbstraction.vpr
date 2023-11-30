@@ -1,0 +1,23 @@
+field next: Ref
+field elem: Int
+
+predicate list(this: Ref, content: Seq[Int]) {
+    acc(this.elem) && acc(this.next) && 
+    (this.next == null ==> content == Seq[Int]()) &&
+    (this.next != null ==> 0 < |content| && content[0] == this.elem && list(this.next, content[1..]))
+}
+
+// Task: extend with a functional specification using the above predicate
+method prepend(this: Ref, e: Int, content: Seq[Int]) returns (res: Ref)
+    requires list(this, content)
+    ensures  list(res, Seq(e) ++ content)
+{
+    //Required so that the verifier explicitly knows that this != null
+    assert unfolding list(this, content) in true
+
+    res := new(*)
+    res.elem := e
+    res.next := this
+
+    fold list(res, Seq(e) ++ content)
+}

@@ -1,0 +1,51 @@
+predicate time_credit()
+method consume_time_credit()
+    requires time_credit()
+
+function math_fibo(n: Int): Int
+    requires 0 <= n
+    ensures 0 <= result
+{
+    n <= 1 ? n : (math_fibo(n - 1) + math_fibo(n - 2))
+}
+
+function math_leonardo(n: Int): Int 
+    requires 0 <= n
+    ensures 0 <= result
+{
+    n <= 1 ? 1 : (math_leonardo(n-1) + math_leonardo(n-2) + 1) 
+}
+
+// TASK 1(b): Fibonacci numbers (recursive)
+//
+// Add time credit annotations to the following method.
+//
+// Remember to insert consume_time_credit() calls according to the background
+// section in the project assignment.
+//
+// You may define additional functions or lemma methods, you may add ghost
+// variables and arguments, and you may augment the method body as you see fit.
+// Make sure the functional contract remains intact!
+
+method fibo_recursive(n: Int)
+    returns (res: Int)
+    requires n >= 0
+    requires acc(time_credit(), math_leonardo(n)/1)
+    ensures res == math_fibo(n)
+{
+    consume_time_credit()
+
+    if (n == 0) {
+        res := 0
+    } elseif (n == 1) {
+        res := 1
+    } else {
+        var sub1: Int
+        sub1 := fibo_recursive(n - 1)
+
+        var sub2: Int
+        sub2 := fibo_recursive(n - 2)
+
+        res := sub1 + sub2
+    }
+}

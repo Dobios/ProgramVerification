@@ -1,0 +1,201 @@
+predicate time_credit()
+method consume_time_credit()
+    requires time_credit()
+
+//Dynamic array fields
+field capacity: Int //Size of array
+field length: Int //Number of stored elements
+field content: Seq[Ref] //Contents of the array
+
+//Array element
+field value: Int //Element in the array
+
+//Amortised time proof credit store
+field credit_store: Int //Number of credits consumed so far
+
+function array_offset(base: Ref, idx: Int): Ref
+    requires dyn_array(base) && idx < (unfolding dyn_array(base) in base.length)
+    ensures result in (unfolding dyn_array(base) in base.content)
+
+// TASK 3(a): Dynamic array predicate
+//
+// Define a predicate for a dynamic array. You may define new fields. You may
+// add arguments or heap-based functions for abstraction.
+// It is assumed that an array can not have a capacity of 0
+predicate dyn_array(arr: Ref) {
+    acc(arr.capacity) && acc(arr.length) && acc(arr.content) && acc(arr.credit_store) &&
+    (arr.credit_store >= 0) &&
+    (arr.capacity >= arr.length) && (|arr.content| == arr.length) && (arr.capacity > 0) && (arr.length > 0) &&
+    (forall n: Ref :: n in arr.content ==> acc(n.value))
+}
+
+// TASK 3(b): "Simple" append method
+//
+// Use the dyn_array predicate you defined to implement a method which appends
+// the given value at the end of the dynamic array, assuming the capacity is
+// sufficient as a precondition.
+method append_nogrow(arr: Ref, val: Int)
+    //Precondition: We are given a dynamic array that is large enough to hold the new element
+    requires dyn_array(arr)
+    requires (unfolding dyn_array(arr) in arr.capacity > arr.length) //Make sure that we at least have enough capacity for an additional element
+    requires acc(time_credit(), 1/1)
+
+    ensures dyn_array(arr)
+    ensures unfolding dyn_array(arr) in arr.credit_store == old(unfolding dyn_array(arr) in arr.credit_store + 1) 
+    ensures unfolding dyn_array(arr) in (arr.length) == (old(unfolding dyn_array(arr) in arr.length) + 1) &&//Check that the length was increased by 1
+            arr.content[arr.length - 1].value == val //Check that the last element contains the value
+    
+{   
+    unfold dyn_array(arr)
+    
+    //Time analysis
+    consume_time_credit()
+    arr.credit_store := arr.credit_store + 1
+
+    //Create a new element to store the value
+    var n : Ref
+    n := new(value)
+
+    //Update the value at that location
+    n.value := val
+
+    //Update content
+    arr.content := arr.content ++ Seq(n)
+
+    //Update length
+    arr.length := arr.length + 1
+
+    fold dyn_array(arr)
+}
+
+//Copies all of the data from arr to new_arr
+method copy_over(arr: Ref, new_arr: Ref)
+    requires dyn_array(arr) && acc(new_arr.capacity) && acc(new_arr.length) && acc(new_arr.content) && acc(new_arr.credit_store)
+    requires acc(time_credit(), (unfolding dyn_array(arr) in arr.length + 1)/1) && new_arr.credit_store >= 0
+
+    ensures dyn_array(arr) && dyn_array(new_arr)
+    ensures unfolding dyn_array(arr) in unfolding dyn_array(new_arr) in 
+        arr.length == new_arr.length && arr.capacity == new_arr.capacity && //New array has the same length and capacity as copied one
+        arr.length == old(unfolding dyn_array(arr) in arr.length) && //Array length remains unchanged
+        forall k: Int :: 0 <= k && k < arr.length ==> new_arr.content[k].value == arr.content[k].value //Guarantees that the content is the same accross both arrays
+{
+    consume_time_credit()
+
+    new_arr.content := Seq[Ref]()
+    new_arr.length := 0
+    new_arr.capacity := unfolding dyn_array(arr) in arr.capacity
+
+    var i: Int := 0
+
+    //Copy over content
+    while (unfolding dyn_array(arr) in i < arr.length)
+        invariant dyn_array(arr) && acc(new_arr.content) && acc(new_arr.length) && acc(new_arr.capacity, 1/2)
+        invariant unfolding dyn_array(arr) in 
+            i <= arr.length &&                                              //Loop index will always fit in array (unless it's the end of the last iteration)
+            arr.length == old(unfolding dyn_array(arr) in arr.length) &&    //Array length is untouched
+            arr.capacity == new_arr.capacity                                //New array capacity remains untouched
+        invariant i == new_arr.length                                       // Length grows along with the index
+        invariant |new_arr.content| == new_arr.length                       // Length should always mirror the content cardinality
+        invariant forall n: Ref :: n in new_arr.content ==> acc(n.value)    // Make sure we always have permissions on the values of our content
+        invariant forall k: Int :: 0 <= k && k < i ==>                      //Check that new_arr.content is always a subset of arr.content
+            new_arr.content[k].value == unfolding dyn_array(arr) in arr.content[k].value 
+        invariant acc(time_credit(), (unfolding dyn_array(arr) in (arr.length - i))/1)
+    {   
+        consume_time_credit()
+        unfold dyn_array(arr)
+        var elem: Ref
+
+        //Create a new element, give it the right value and add it to the content
+        elem := new(value)
+        elem.value := arr.content[i].value
+        new_arr.content := new_arr.content ++ Seq(elem)
+
+        //Increase current length to match the content
+        new_arr.length := new_arr.length + 1
+
+        i := i + 1
+        fold dyn_array(arr)
+    }
+    fold dyn_array(new_arr)
+}
+
+// TASK 3(c): Resize method
+//
+// Use the dyn_array predicate you defined to implement a method which
+// reallocates the given dynamic array, doubling its capacity and copying over
+// its original contents.
+method grow(arr: Ref) returns (new_arr: Ref)
+    requires dyn_array(arr)
+    requires acc(time_credit(), (unfolding dyn_array(arr) in arr.length + 2)/1)
+
+    ensures dyn_array(arr) 
+    ensures dyn_array(new_arr)
+    ensures unfolding dyn_array(new_arr) in (unfolding dyn_array(arr) in ( //Guarantees that both arrays have the same length and that the array has grown
+        new_arr.capacity == (2 * arr.capacity) && new_arr.length == arr.length && new_arr.capacity > new_arr.length &&
+        arr.length == old(unfolding dyn_array(arr) in arr.length)
+    )) 
+    ensures unfolding dyn_array(arr) in unfolding dyn_array(new_arr) in //Guarantees that the content is the same accross both arrays
+        forall k: Int :: 0 <= k && k < arr.length ==> new_arr.content[k].value == arr.content[k].value 
+{
+    consume_time_credit()
+
+    //Create the target array
+    new_arr := new(capacity, length, content, credit_store)
+    new_arr.credit_store := 0
+
+    //Copy over all of the data
+    copy_over(arr, new_arr)
+
+    //Double the resulting array's capacity
+    unfold dyn_array(new_arr)
+    new_arr.capacity := 2 * (unfolding dyn_array(arr) in arr.capacity)
+    fold dyn_array(new_arr)
+}
+
+// TASK 3(d): "Full" append method
+//
+// Using the previous two methods, implement a method which will append a value
+// to the given dynamic array, resizing it first if necessary.
+method append(arr: Ref, val: Int)
+    returns (new_arr: Ref)
+    requires dyn_array(arr)
+    requires acc(time_credit(), (unfolding dyn_array(arr) in (2 * arr.length + 5))/1)
+
+    ensures dyn_array(new_arr) && dyn_array(arr)
+    ensures unfolding dyn_array(new_arr) in unfolding dyn_array(arr) in 
+        (new_arr.length) == arr.length + 1 && //Check that the length was increased by 1
+        new_arr.content[arr.length].value == val  //Check that the last element contains the value
+{   
+    consume_time_credit()
+
+    //This has to be done outside of the branching to avoid loosing the information about the branch condition itself.
+    //Create a new array
+    new_arr := new(length, capacity, content, credit_store)
+    new_arr.credit_store := 0
+    
+    //Copy over the content from arr
+    copy_over(arr, new_arr)
+
+    //Check if resizing is needed
+    if(unfolding dyn_array(arr) in arr.capacity == arr.length) {
+        //Grow the array
+        new_arr := grow(arr)
+        
+        //Add value to new array
+        append_nogrow(new_arr, val)
+    } else {
+        
+        //Append the new value
+        append_nogrow(new_arr, val)
+    }
+}
+
+// TASK 3(e): Amortised time analysis
+//
+// Using stored time credits, prove that `append` runs in constant time.
+//
+// SOLUTION: The idea would be to maintain a credit_store throughout the execution
+// This store is incremented every time time_credits are consumed.
+// The idea is then to show that in append, we will never require more credits then those 
+// stored up until now, showing that a constant can be used to represent the execution time
+// and thus it can be seen as running in constant time.

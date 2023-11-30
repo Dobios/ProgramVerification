@@ -1,0 +1,58 @@
+function math_fibo(n: Int): Int
+    requires 0 <= n
+{
+    n <= 1 ? n : (math_fibo(n - 1) + math_fibo(n - 2))
+}
+
+method fibonacci() {
+    var n: Int // input: which fibonacci number?
+
+    assume 0 <= n // precondition
+
+    var res: Int // output
+
+    var a: Int // local variables
+    var b: Int
+    var i: Int
+
+    a := 0
+    b := 1
+    assert a == math_fibo(0)
+    assert b == math_fibo(1)
+    res := a
+
+    i := 0
+    assume i == 0
+
+    //flipflop var
+    var ff0: Bool := true
+    while (i < n) 
+        invariant 0 <= i && i <= n
+        invariant a >= 0 && b >= 1
+        invariant ff0 == (i % 2 == 0)
+        invariant (!ff0 && res == b) || (ff0 && res == a)
+        invariant (ff0 && a == math_fibo(i) && b == math_fibo(i+1)) ||
+         (!ff0 && a == math_fibo(i+1) && b == math_fibo(i))
+    {
+        // flip {
+        //     a := a + b
+        //     res := b
+        // } flop {
+        //     b := a + b
+        //     res := a
+        // }
+
+        // -- ADD ENCODING OF FLIP-FLOP HERE --
+        if(ff0) {
+            a := a + b
+            res := b
+        } else {
+            b := a + b
+            res := a
+        }
+        ff0 := !ff0
+        i := i + 1
+    }
+
+    assert res == math_fibo(n) // postcondition
+}

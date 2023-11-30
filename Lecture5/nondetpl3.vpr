@@ -1,0 +1,14 @@
+method main() {
+    var x: Int
+    var star: Bool
+
+    if (star) {
+        x := 42
+    } else {
+        x := 23
+    }
+
+    assert x == 42 || x == 23
+    assert x == 42
+    assert x == 23
+}

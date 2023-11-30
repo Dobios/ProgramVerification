@@ -1,0 +1,115 @@
+method choose(source: Set[Int])
+    returns (el: Int)
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 4 (CHOOSE OPERATOR) HERE --
+    requires |source| > 0
+    ensures el in source
+
+method compute_union() {
+    var set_a: Set[Int] // input: first set
+    var set_b: Set[Int] // input: second set
+
+    // no precondition
+
+    var res: Set[Int] := Set() // output
+
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 4 (UNION) HERE --
+    var tmp : Set[Int] := Set()
+    var elem : Int 
+
+    //Check for trivial cases
+    if(|set_a| == 0) {
+        res := set_b
+    } else {
+        if(|set_b| == 0) {
+            res := set_a
+        } else {
+            //Non trivial case
+            res := set_a
+            tmp := set_b
+
+            while (|tmp| > 0)
+                invariant |set_b| >= |tmp| && |tmp| >= 0 
+                invariant forall i: Int :: i in set_a ==> i in res
+                invariant forall i: Int :: i in res ==> i in (set_a union set_b)
+                invariant forall i: Int :: !(i in tmp) && (i in set_b) ==> i in res
+            {
+                //Get an element from b and add it to the result
+                elem := choose(set_b)
+                if(elem in tmp) {
+                    tmp := tmp setminus Set(elem)
+                    res := res union Set(elem)
+                }
+            }
+        }
+    }
+
+    assert res == (set_a union set_b) // postcondition
+}
+
+method compute_intersection() {
+    var set_a: Set[Int] // input: first set
+    var set_b: Set[Int] // input: second set
+
+    // no precondition
+
+    var res: Set[Int] := Set() // output
+
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 4 (INTERSECTION) HERE --
+    var tmp: Set[Int] := Set()
+    var elem: Int
+
+    //Check for non-trivial cases
+    if(|set_a| != 0 && |set_b| != 0) {
+        tmp := set_b
+
+        while(|tmp| > 0) 
+            invariant |set_b| >= |tmp| && |tmp| >= 0
+            invariant forall i: Int :: i in res ==> i in (set_a intersection set_b)
+            invariant forall i: Int :: i in set_a && i in set_b && !(i in tmp) ==> i in res
+        {
+           elem := choose(set_b) 
+           if(elem in tmp && elem in set_a) {
+               res := res union Set(elem)
+               tmp := tmp setminus Set(elem)
+           }
+        }
+    }
+
+    assert res == (set_a intersection set_b) // postcondition
+}
+
+method compute_setminus() {
+    var set_a: Set[Int] // input: first set
+    var set_b: Set[Int] // input: second set
+
+    // no precondition
+
+    var res: Set[Int] // output
+
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 4 (SET DIFFERENCE) HERE --
+    var tmp: Set[Int]
+    var elem: Int
+
+    res := Set()
+    tmp := set_a
+
+    //Check for trivial cases
+    if(|set_a| != 0 && |set_b| == 0) {
+        res := set_a
+    } else {
+        if(|set_a| != 0 && |set_b| != 0) {
+            while(|tmp| > 0) 
+                invariant |set_a| >= |tmp| && |tmp| >= 0
+                invariant forall i: Int :: i in tmp ==> i in set_a
+                invariant forall i: Int :: !(i in tmp) && i in set_a && !(i in set_b) <==> i in res
+            {
+                elem := choose(tmp)
+                if(!(elem in set_b) && elem in set_a) {
+                    res := res union Set(elem)
+                }  
+                tmp := tmp setminus Set(elem)
+            }
+        }
+    }
+    assert res == (set_a setminus set_b) // postcondition
+}

@@ -1,0 +1,32 @@
+field next: Ref
+field elem: Int
+
+predicate lseg(this: Ref, last: Ref) {
+    this != last ==> acc(this.next) && lseg(this.next, last)
+}
+
+predicate list(this: Ref) {
+    acc(this.next) && lseg(this.next, this)
+}
+
+method create() returns (res: Ref)
+    ensures list(res)
+{
+    res := new(*)
+    res.next := res
+    fold lseg(res, res) // this is necessary to allow for the right predicate of list
+    fold list(res)
+}
+
+method insert(this: Ref)
+    requires list(this)
+    ensures list(this)
+{
+    unfold list(this)
+    var n: Ref
+    n := new(*)
+    n.next := this.next
+    fold lseg(n, this)
+    this.next := n
+    fold list(this)
+}

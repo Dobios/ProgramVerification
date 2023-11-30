@@ -1,0 +1,16 @@
+method choose(lower: Int, upper: Int) 
+    returns (choice: Int)
+    requires lower <= upper
+    ensures choice >= lower && choice <= upper
+
+method main() {
+    var i: Int
+    var j: Int
+
+    i := choose(0, 4)
+    j := choose(0, 4)
+
+    assert 0 <= i && i <= 4
+    assert 0 <= j && j <= 4
+    assert i == j || i != j
+}

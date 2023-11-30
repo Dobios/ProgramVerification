@@ -1,0 +1,54 @@
+predicate time_credit()
+method consume_time_credit()
+    requires time_credit()
+
+function math_fibo(n: Int): Int
+    requires 0 <= n
+{
+    n <= 1 ? n : (math_fibo(n - 1) + math_fibo(n - 2))
+}
+
+// TASK 1(a): Fibonacci numbers (iterative)
+//
+// Add time credit annotations to the following method.
+//
+// Remember to insert consume_time_credit() calls according to the background
+// section in the project assignment.
+//
+// You may define additional functions or lemma methods, you may add ghost
+// variables and arguments, and you may augment the method body as you see fit.
+// Make sure the functional contract remains intact!
+method fibo_iterative(n: Int)
+    returns (res: Int)
+    requires n >= 0
+    requires acc(time_credit(), (n+1)/1)
+    ensures res == math_fibo(n)
+{
+    consume_time_credit()
+
+    var a: Int // local variables
+    var b: Int
+
+    a := 0
+    b := 1
+    assert a == math_fibo(0)
+    assert b == math_fibo(1)
+
+    var i: Int := 0
+    while (i < n)
+        invariant 0 <= i && i <= n
+        invariant a == math_fibo(i)
+        invariant b == math_fibo(i + 1)
+        //Loop body needs to be called another n-i times a this point 
+        invariant acc(time_credit(), (n-i)/1)
+    {
+        consume_time_credit()
+
+        var old_a: Int := a
+        a := b
+        b := old_a + b
+        i := i + 1
+    }
+
+    res := a
+}

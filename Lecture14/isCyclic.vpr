@@ -1,0 +1,23 @@
+field next: Ref
+
+define list(nodes) (
+    forall n: Ref :: n in nodes ==> acc(n.next) && (n.next != null ==> n.next in nodes)
+)
+
+method isCyclic(nodes: Set[Ref], root: Ref) returns (res: Bool)
+    requires list(nodes)
+    requires root in nodes
+    ensures list(nodes)
+{
+    var node: Ref := root
+    var traversed: Set[Ref] := Set(node)
+
+    while(node.next != null && !(node.next in traversed))
+        invariant list(nodes)
+        invariant node in nodes
+    {
+        traversed := traversed union Set(node.next)
+        node := node.next
+    }
+    res := (node.next != null)
+}

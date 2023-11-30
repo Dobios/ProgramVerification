@@ -1,0 +1,175 @@
+predicate time_credit()
+method consume_time_credit()
+    requires time_credit()
+
+//BST fields
+field value: Int //Value of the node
+field left: Ref //Left sub-tree
+field right: Ref //Right sub-tree
+
+// TASK 2(a): Binary tree predicate
+//
+// Define a predicate for a binary tree. You may define new fields.
+predicate bt(tree: Ref) {
+    acc(tree.value) && acc(tree.left) && acc(tree.right) &&
+        (tree.left != null ==> bt(tree.left)) &&
+        (tree.right != null ==> bt(tree.right))
+}
+
+//Finds the minimum value in a given tree assuming it's a bst
+function min_val_in_bst(tree: Ref): Int
+    requires bt(tree)
+{
+    unfolding bt(tree) in tree.left != null ? min_val_in_bst(tree.left) : tree.value
+}
+
+//Finds the maximum value in a given tree assuming it's a bst
+function max_val_in_bst(tree: Ref): Int
+    requires bt(tree)
+{
+    unfolding bt(tree) in tree.right != null ? max_val_in_bst(tree.right) : tree.value
+}
+
+// TASK 2(b): Binary search tree predicate
+//
+// Define a predicate for a binary search tree. You may define new fields and
+// additional predicates. You may add arguments or heap-based functions for
+// abstraction.
+predicate bst(tree: Ref) {
+    bt(tree) && (
+    (unfolding bt(tree) in tree.left != null) ==> ((unfolding bt(tree) in (tree.value > max_val_in_bst(tree.left))) && 
+        bst(unfolding bt(tree) in tree.left))) && (
+    (unfolding bt(tree) in tree.right != null) ==> ((unfolding bt(tree) in (tree.value < min_val_in_bst(tree.right))) && 
+        bst(unfolding bt(tree) in tree.right)))
+}
+
+//Checks that if a given value can be found inside of a given tree
+function contains_val(tree: Ref, val: Int): Bool
+    requires bt(tree)
+{
+    unfolding bt(tree) in (tree.value == val) ? true :
+        (val < tree.value) && (tree.left != null) ? contains_val(tree.left, val) : 
+        (tree.value < val) && (tree.right != null) ? contains_val(tree.right, val) :
+        false 
+}
+
+//Lemma that declares that a value is contained in the tree
+//Only to be used after a node containg said value is found to be contained within a child tree
+//Thus it requires that the value is contained in one of the children
+//This can be used to convince viper that a subtree containing an element implies that the tree also contains the element
+method lemma_contains(tree: Ref, val : Int)
+    requires bt(tree)  
+    requires unfolding bt(tree) in ((tree.value == val) || (tree.left != null && contains_val(tree.left, val)) ||
+                                    (tree.right != null && contains_val(tree.right, val)))
+    ensures bt(tree)
+    ensures contains_val(tree, val)
+
+//Returns the maximum value between two ints
+function max_int(a: Int, b: Int): Int 
+    ensures ((result == a && result > b) || (result == b && result > a) || (a == b)) 
+{
+    a > b ? a : b
+}
+
+//Recursively computes the height of a given binary tree
+function height(tree: Ref): Int
+    requires bst(tree)
+    ensures result > 0
+{
+    unfolding bst(tree) in unfolding bt(tree) in 
+        1 + max_int(tree.left == null ? 0 : height(tree.left), tree.right == null ? 0 : height(tree.right))
+}
+
+
+// TASK 2(c): BST insertion method
+//
+// Use the bst predicate you defined to implement a method which inserts a
+// value into the given tree.
+method bst_insert(tree: Ref, val: Int)
+    requires bst(tree)
+    requires acc(time_credit(), (height(tree))/1) //Runtime = h + 1 where h = 0 if tree has no children thus h = height(tree) - 1
+    ensures bst(tree)
+{
+    consume_time_credit()
+
+    //Check where to put the new node
+    if(unfolding bst(tree) in unfolding bt(tree) in val < tree.value) {
+        //The new node should be put in the left, make sure left != null
+        if(unfolding bst(tree) in unfolding bt(tree) in tree.left != null) {
+            unfold bst(tree)
+            bst_insert(unfolding bt(tree) in tree.left, val)
+            fold bst(tree)
+        } else {
+            unfold bst(tree)
+            unfold bt(tree)
+            //If left is null then place val there
+            //Create a new node for our val
+            var node: Ref
+            node := new(left, right, value)
+            node.value := val
+            node.left := null
+            node.right := null
+
+            //This node now becomes the left child of our tree
+            tree.left := node
+
+            //This assumption is guaranteed by the if statement (need to remind Viper of this fact for some reason)
+            assume node.value < tree.value 
+
+            //Fold up the binary trees
+            fold bt(node)
+            fold bt(tree)
+            
+            //Due to the structure of our predicate, node must be a bst in order to fold bst(tree).
+            //However, since bt(tree) had to be folded before we fold bst(node) (to guarentee that bt(node) is still visible)
+            //we can no longer access node, thus we can no longer fold bst(node). 
+            //Since local unfolding of bt(tree) to access node in bst(...) caused a consistency error in Viper,
+            //the only viable solution left is to inhale the permissions on bst(node).
+            //This is justified since at this point node will always be a valid bst given that both of its children are null.
+            //Thus this inhaling shouldn't cause any incorrect specifications to be provable.
+            inhale bst(node)
+            fold bst(tree)
+        }
+    // Otherwise go right (tree.value < val)
+    } else {
+        //Same idea as for tree.left
+        if(unfolding bst(tree) in unfolding bt(tree) in tree.right != null) {
+            unfold bst(tree)
+            bst_insert(unfolding bt(tree) in tree.right, val)
+            fold bst(tree)
+        } else {
+            unfold bst(tree)
+            unfold bt(tree)
+            //Leaves are implicitly also bst since they have no children
+            var node: Ref
+            node := new(left, right, value)
+            node.value := val
+            node.left := null
+            node.right := null
+            tree.right := node
+
+            //This assumption is guaranteed by the if statement (need to remind Viper of this fact for some reason)
+            assume node.value > tree.value 
+
+            //Fold up the binary trees
+            fold bt(node)
+            fold bt(tree)
+            
+            //Due to the structure of our predicate, node must be a bst in order to fold bst(tree).
+            //However, since bt(tree) had to be folded before we fold bst(node) (to guarentee that bt(node) is still visible)
+            //we can no longer access node, thus we can no longer fold bst(node). 
+            //Since local unfolding of bt(tree) to access node in bst(...) caused a consistency error in Viper,
+            //the only viable solution left is to inhale the permissions on bst(node).
+            //This is justified since at this point node will always be a valid bst given that both of its children are null.
+            //Thus this inhaling shouldn't cause any incorrect specifications to be provable.
+            inhale bst(node)
+            fold bst(tree)
+        }
+    }
+}
+
+// TASK 2(d): Logarithmic runtime upper bound
+//
+// Prove that `bst_insert` terminates within `h + 1` time units, where `h` is
+// the height of the tree.
+// SOLUTION: This was done using the height function which considers that a root with no children has a height of 1

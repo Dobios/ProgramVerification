@@ -1,0 +1,103 @@
+method mod8() {
+    var n: Int // input
+
+    assume 0 <= n // precondition
+
+    var res: Int // output
+
+    var i: Int // local variables
+
+    res := 0
+    i := 0
+
+    var ff0: Bool := true
+    var ff1: Bool := true
+    var ff2: Bool := true
+    var ff3: Bool := true
+    var ff4: Bool := true
+    var ff5: Bool := true
+    var ff6: Bool := true
+    while (i < n) 
+        invariant 0 <= i && i <= n
+        invariant 0 <= res && res < 8
+        invariant res == i % 8
+        invariant (i % 8) == 0 && ff0 && ff1 && ff2 && ff3 && ff4 && ff5 && ff6 ||
+                (i % 8) == 1 && !ff0 && !ff1 && !ff2 && ff3 && ff4 && ff5 && ff6 ||
+                (i % 8) == 2 && ff0 && !ff1 && !ff2 && ff3 && !ff4 && !ff5 && ff6 ||
+                (i % 8) == 3 && !ff0 && ff1 && !ff2 && !ff3 && !ff4 && !ff5 && ff6 ||
+                (i % 8) == 4 && ff0 && ff1 && !ff2 && !ff3 && ff4 && !ff5 && !ff6 ||
+                (i % 8) == 5 && !ff0 && !ff1 && ff2 && !ff3 && ff4 && !ff5 && !ff6 ||
+                (i % 8) == 6 && ff0 && !ff1 && ff2 && !ff3 && !ff4 && ff5 && !ff6 ||
+                (i % 8) == 7 && !ff0 && ff1 && ff2 && ff3 && !ff4 && ff5 && !ff6
+    {
+        // flip {
+        //     flip {
+        //         flip {
+        //             res := 1
+        //         } flop {
+        //             res := 5
+        //         }
+        //     } flop {
+        //         flip {
+        //             res := 3
+        //         } flop {
+        //             res := 7
+        //         }
+        //     }
+        // } flop {
+        //     flip {
+        //         flip {
+        //             res := 2
+        //         } flop {
+        //             res := 6
+        //         }
+        //     } flop {
+        //         flip {
+        //             res := 4
+        //         } flop {
+        //             res := 0
+        //         }
+        //     }
+        // }
+
+        // -- ADD ENCODING OF FLIP-FLOP HERE --
+        if(ff0) {
+            if(ff1) {
+                if(ff2) {
+                    res := 1
+                } else {
+                    res := 5
+                }
+                ff2 := !ff2
+            } else {
+                if(ff3) {
+                    res := 3
+                } else {
+                    res := 7
+                }
+                ff3 := !ff3
+            }
+            ff1 := !ff1
+        } else {
+            if(ff4) {
+                if(ff5) {
+                    res := 2
+                } else {
+                    res := 6
+                }
+                ff5 := !ff5
+            } else {
+                if(ff6) {
+                    res := 4
+                } else {
+                    res := 0
+                }
+                ff6 := !ff6
+            }
+            ff4 := !ff4
+        }
+        ff0 := !ff0
+        i := i + 1
+    }
+    assert res == n % 8 // postcondition
+}

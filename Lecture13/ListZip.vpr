@@ -1,0 +1,54 @@
+field next: Ref
+field elem: Int
+
+predicate list(this: Ref) {
+    acc(this.elem) && acc(this.next) && 
+    (this.next != null ==> list(this.next))
+}
+
+
+// implement and verify this method
+method zip(this: Ref, that: Ref) returns (res: Ref)
+    requires acc(list(this), 1/2) && acc(list(that), 1/2)
+    ensures acc(list(this), 1/2)
+    ensures acc(list(that), 1/2)
+    ensures list(res)
+{
+    unfold acc(list(this), 1/2)
+
+    //Handle case where one of the lists is empty
+    if(this.next == null) {
+        res := cloneList(that)
+    } else {
+        res := new(*)
+
+        res.elem := this.elem
+
+        var n: Ref
+        n := zip(that, this.next)
+        res.next := n
+
+        fold list(res)
+    }
+    fold acc(list(this), 1/2)
+}
+
+
+method cloneList(this: Ref) returns (res: Ref)
+    requires acc(list(this), 1/2)
+    ensures  acc(list(this), 1/2) && list(res)
+{
+    res := new(*)
+
+    unfold acc(list(this), 1/2)
+    if(this.next == null) {
+        res.next := null
+    } else {
+        var tmp: Ref
+        tmp := cloneList(this.next)
+        res.elem := this.elem
+        res.next := tmp
+    }
+    fold acc(list(this), 1/2)
+    fold list(res)
+}

@@ -1,0 +1,44 @@
+method seq_minmax(
+    seq: Seq[Int],
+    idx_from: Int,
+    idx_to: Int
+)
+    returns (min: Int, max: Int)
+    requires 1 <= |seq|
+    requires 0 <= idx_from && idx_from <= idx_to && idx_to < |seq|
+    // -- ADD YOUR SOLUTION TO TASK 5 (SPECIFICATION) HERE --
+    ensures forall i: Int :: (idx_from <= i && i <= idx_to) ==> min <= seq[i] && seq[i] <= max 
+    ensures exists i: Int :: (idx_from <= i && i <= idx_to) && seq[i] == min 
+    ensures exists i: Int :: (idx_from <= i && i <= idx_to) && seq[i] == max 
+{
+    // -- ADD YOUR SOLUTION TO TASK 5 (IMPLEMENTATION) HERE --
+    var tmpmin : Int
+    var tmpmax : Int
+    var swap : Int
+    var mididx : Int
+
+    if(idx_from == idx_to) {
+        min := seq[idx_from]
+        max := seq[idx_from]
+    } else {
+        mididx := idx_from + ((idx_to - idx_from) / 2)
+        tmpmin, tmpmax := seq_minmax(seq, idx_from, mididx)
+        min, max := seq_minmax(seq, mididx + 1, idx_to)
+
+        if(tmpmin < min) {
+            swap := min
+            min := tmpmin
+            tmpmin := swap
+        }
+        if(tmpmax > max) {
+            swap := max
+            max := tmpmax
+            tmpmax := swap
+        }
+        if(min > max) {
+            swap := min
+            min := max
+            max := min
+        }
+    }
+}

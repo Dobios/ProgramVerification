@@ -1,0 +1,38 @@
+function math_pow(n: Int, e: Int): Int
+    requires e >= 0
+{
+    e == 0 ? 1 : n * math_pow(n, e - 1)
+}
+
+method lemma_pow(b: Int, y: Int)
+    requires y >= 0
+    requires y % 2 == 0
+    ensures math_pow(b, y) == math_pow(b * b, y / 2)
+
+method pow_fast() {
+    var n: Int // input: base
+    var e: Int // input: exponent
+
+    assume e >= 0 // precondition
+
+    var res: Int := 1 // output
+
+    // -- IMPLEMENT YOUR SOLUTION TO TASK 1 (POW_FAST) HERE --
+    var b: Int := n
+    var y: Int := e
+
+    while (y > 0)
+        invariant 0 <= y && y <= e
+        invariant (2 * y) % 2 == 0
+        invariant math_pow(b, y) * res == math_pow(n, e)
+    {
+        if (y % 2 == 1) {
+            res := res * b
+        }
+        y := y / 2
+        lemma_pow(b, 2*y)
+        b := b * b
+    }
+    
+    assert res == math_pow(n, e) // postcondition
+}

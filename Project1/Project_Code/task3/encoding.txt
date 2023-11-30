@@ -1,0 +1,39 @@
+-- ADD DESCRIPTION OF ENCODING OF FLIP-FLOPS HERE --
+In order to encode flip flops, we do as follows:
+while (cond) {
+    flip {
+        //flip code
+    } flop {
+        //flop code
+    }
+}
+is encoded using an additional boolean variable and an if statement
+var ff0: Bool := true
+while (cond) {
+    if(ff0) {
+        //flip code
+    } else {
+        //flop code
+    }
+    ff0 := !ff0
+}
+Note that using this encoding, we require an extra global variable per flip flop statement. 
+This works also with nested flip flops:
+var ff0: Bool := true
+var ff1: Bool := true
+while (cond) {
+    if(ff0) {
+        //flip code
+        //Nested flip flop
+        if(ff1) {
+            //flip code
+        } else {
+            //flop code
+        }
+        ff1 := !ff1
+    } else {
+        //flop code
+    }
+    ff0 := !ff0
+}
+Since Viper doesn't technically have global variables, we can simply use variables declared outside of the loop body.

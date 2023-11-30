@@ -1,0 +1,37 @@
+field next: Ref
+field elem: Int
+
+predicate list(this: Ref) {
+    acc(this.elem) && acc(this.next) && 
+    (this.next != null ==> list(this.next))
+}
+
+function content(this: Ref): Seq[Int]
+    requires list(this)
+{
+    unfolding list(this) in (this.next == null ? Seq[Int]() : Seq(this.elem) ++ content(this.next))
+}
+
+// Task: implement this function
+function length(this: Ref): Int
+    requires list(this)
+{
+    unfolding list(this) in 
+        (this.next == null) ? 0 : 1 + length(this.next)
+}
+
+// Task : write a functional specification
+method prepend(this: Ref, e: Int) returns (res: Ref)
+    requires list(this)
+    ensures  list(res)
+    ensures  content(res) == (Seq(e) ++ old(content(this)))
+    ensures  length(res) == (1 + old(length(this)))
+{
+    assert unfolding list(this) in true
+    res := new(*)
+    res.elem := e
+    res.next := this
+    fold list(res)
+}
+
+
