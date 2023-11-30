@@ -1,4 +1,4 @@
-# PV_HS22
+# Program Verification
 
-Private repository for the Program Verification course.
+Repository my work done during the Program Verification course.
 
